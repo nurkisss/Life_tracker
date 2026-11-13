@@ -46,10 +46,11 @@ dialog{border:1px solid var(--bd);border-radius:14px;background:var(--cd);color:
 svg text{fill:var(--mu);font-size:9px}
 .tk{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--bd)}.tk:first-child{border:0}.tk>div{flex:1;min-width:0;overflow-wrap:anywhere}.tk small{display:block;color:var(--mu);font-size:12px}.tk.dn span{text-decoration:line-through;color:var(--mu)}.tk input[type=checkbox]{width:18px;height:18px;flex:none}
 .wd{display:flex;gap:6px;flex-wrap:wrap}.wd label{display:flex;align-items:center;gap:4px;border:1px solid var(--bd);border-radius:8px;padding:4px 8px}
+#lk{position:fixed;inset:0;z-index:200;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:16px}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style></head><body>
 <nav><button data-a="nv" data-s="ov"><b>◎</b>Обзор</button><button data-a="nv" data-s="gl"><b>✓</b>Цели</button><button data-a="nv" data-s="tk"><b>☑</b>Задачи</button><button data-a="nv" data-s="cal"><b>▦</b>Календарь</button><button data-a="nv" data-s="rp"><b>✎</b>Отчёты</button><button data-a="nv" data-s="set"><b>⚙</b>Настройки</button></nav>
-<main></main><dialog id="dlg"></dialog><div id="ts" hidden role="status"></div>
+<main></main><div id="lk" hidden></div><dialog id="dlg"></dialog><div id="ts" hidden role="status"></div>
 <script>
 let K='pgd.v1';
 const MN='Январь Февраль Март Апрель Май Июнь Июль Август Сентябрь Октябрь Ноябрь Декабрь'.split(' '),
@@ -146,8 +147,8 @@ fl=(id,t,v)=>`<label class="f" for="${id}">${t}</label><textarea id="${id}">${es
 return hd('Недельные отчёты')+`<div class="mn"><button data-a="wp" aria-label="Предыдущая неделя">←</button><b>${sd(w)} — ${sd(we)}</b><button data-a="wn" aria-label="Следующая неделя">→</button></div>
 <div class="cd">${fl('rm','Какие цели продвинулись'+(r?'':' (подсказка из истории)'),r?R.moved:sug())}${fl('rd','Что выполнено',R.done)}${fl('rf','Что не получилось',R.fail)}${fl('rw','Почему',R.why)}${fl('rn','План на следующую неделю',R.next)}<div class="q"><button class="pr" data-a="rsv">Сохранить отчёт</button></div></div>
 <h2>Прошлые отчёты</h2>`+(S.reports.length?[...S.reports].sort((a,b)=>b.wk.localeCompare(a.wk)).map(x=>`<div class="cd"><div class="row"><b>Неделя ${sd(x.wk)} — ${sd(addD(x.wk,6))}</b><div class="sr"><button data-a="rv" data-wk="${x.wk}">Просмотр</button><button class="dg" data-a="rdel" data-wk="${x.wk}" aria-label="Удалить отчёт">✕</button></div></div></div>`).join(''):'<div class="cd m">Отчётов пока нет. Заполните форму выше.</div>')}
-function set(){return hd('Настройки')+acct()+`<div class="cd"><b>Тема</b><div class="sg">${[['auto','Системная'],['light','Светлая'],['dark','Тёмная']].map(([k,t])=>`<button data-a="thm" data-k="${k}" class="${S.theme===k?'on':''}">${t}</button>`).join('')}</div></div>
-<div class="cd"><b>Данные</b><div class="m">${mem?'Хранилище недоступно: данные только в памяти.':'Данные хранятся в этом браузере (localStorage).'}</div><div class="sr"><button data-a="ex">Экспорт JSON</button><button data-a="im">Импорт JSON</button></div></div>
+function set(){return hd('Настройки')+acct()+pinc()+`<div class="cd"><b>Тема</b><div class="sg">${[['auto','Системная'],['light','Светлая'],['dark','Тёмная']].map(([k,t])=>`<button data-a="thm" data-k="${k}" class="${S.theme===k?'on':''}">${t}</button>`).join('')}</div></div>
+<div class="cd"><b>Данные</b><div class="m">${mem?'Хранилище недоступно: данные только в памяти.':'Данные хранятся в этом браузере (localStorage).'}</div><div class="sr" style="flex-wrap:wrap"><button data-a="bkp">Сохранить копию…</button><button data-a="ex">Экспорт JSON</button><button data-a="im">Импорт JSON</button></div></div>
 <div class="cd"><b>Сброс</b><div class="m">Удалит все цели и отчёты без возможности восстановления.</div><button class="dg" data-a="rs">Сбросить всё</button></div>`}
 function ap(){document.documentElement.dataset.theme=S.theme==='auto'?(mq.matches?'dark':'light'):S.theme}
 function render(){ap();document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.s===U.s));const g=U.g&&gm(U.g);if(U.g&&!g)U.g=null;$('main').innerHTML=U.s==='gl'?(g?dt(g):gl()):({ov,tk,cal,rp,set}[U.s])()}
@@ -192,6 +193,14 @@ return `<b style="font-size:17px">${g?'Редактирование цели':'�
 function tg(){const t=gi('fy').value;D.querySelectorAll('[data-t]').forEach(e=>e.hidden=!e.dataset.t.split(' ').includes(t)||(e.id==='fst'&&!!FO&&FO.type==='steps'))}
 /* действия */
 const act={n(){},
+async bkp(){const f=new File([JSON.stringify(S,null,1)],'goals-'+TD()+'.json',{type:'application/json'});try{if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:'Резервная копия целей'});return}}catch(e){if(e.name==='AbortError')return}act.ex()},
+pinset(){mo(`<b style="font-size:17px">Новый PIN-код</b><label class="f" for="np1">PIN (4–8 цифр)</label><input id="np1" type="password" inputmode="numeric" maxlength="8" autocomplete="off"><label class="f" for="np2">Повторите PIN</label><input id="np2" type="password" inputmode="numeric" maxlength="8" autocomplete="off"><div id="nperr" class="m" style="color:var(--er)"></div><div class="sr" style="justify-content:flex-end"><button data-a="cx">Отмена</button><button class="pr" data-a="pinsv">Сохранить</button></div>`)},
+async pinsv(){const a=gi('np1').value,er=m=>{gi('nperr').textContent=m};if(!/^\d{4,8}$/.test(a))return er('PIN: от 4 до 8 цифр');if(a!==gi('np2').value)return er('PIN-коды не совпадают');const s=uid();try{localStorage.setItem(K+'.pin',JSON.stringify({s,h:await hx(s+a)}))}catch(e){return er('Не удалось сохранить на устройстве')}D.close();render();toast('PIN включён')},
+pinoff(){ask('Отключить PIN-код на этом устройстве?',()=>{try{localStorage.removeItem(K+'.pin')}catch(e){}render()})},
+async ul(){const p=pg(),v=gi('pin').value,er=m=>{gi('perr').textContent=m};if(!p)return;if(Date.now()<LK.u)return er('Подождите немного и повторите');if(await hx(p.s+v)===p.h){LK.n=0;gi('lk').hidden=true;gi('lk').innerHTML=''}else if(++LK.n>=5){LK.u=Date.now()+30000;LK.n=0;er('Слишком много попыток. Подождите 30 секунд.')}else er('Неверный PIN')},
+async lo2(){try{await push()}catch(e){}gi('lk').hidden=true;gi('lk').innerHTML='';out(1)},
+cfm(){const c=CF.shift();BV[c.k]=c.row.updated_at;sp();D.close();CF.length?cfShow():sync(0)},
+cfc(){const c=CF.shift(),k=c.k,r=c.row;if(r.deleted){put(k,null);delete SN[k];delete BV[k]}else{const n=put(k,r.data);SN[k]=JSON.stringify(n);BV[k]=r.updated_at}ls();sp();D.close();render();if(CF.length)cfShow()},
 lg(){return aut('token?grant_type=password')},su(){return aut('signup')},
 sn(){sync(1);toast('Синхронизация запущена')},
 lo(){ask('Выйти из аккаунта? Данные останутся в облаке и вернутся при следующем входе.',async()=>{try{await push()}catch(e){}out(1)})},
@@ -238,7 +247,7 @@ rsv(){const v=id=>gi(id).value.trim();S.reports=S.reports.filter(x=>x.wk!==U.wk)
 rv(e){const r=S.reports.find(x=>x.wk===e.dataset.wk);mo(`<b style="font-size:17px">Неделя ${sd(r.wk)} — ${sd(addD(r.wk,6))}</b>`+[['Продвинулись','moved'],['Выполнено','done'],['Не получилось','fail'],['Почему','why'],['План на следующую неделю','next']].map(([t,k])=>`<div class="f">${t}</div><div style="white-space:pre-wrap">${esc(r[k])||'—'}</div>`).join('')+'<div class="sr" style="justify-content:flex-end;margin-top:14px"><button data-a="cx">Закрыть</button></div>')},
 rdel(e){ask('Удалить этот отчёт?',()=>{S.reports=S.reports.filter(x=>x.wk!==e.dataset.wk);save();render()})},
 ex(){mo(`<b style="font-size:17px">Экспорт JSON</b><textarea id="xj" readonly style="min-height:200px;margin-top:8px">${esc(JSON.stringify(S,null,1))}</textarea><div class="sr" style="flex-wrap:wrap"><button class="pr" data-a="dl">Скачать файл</button><button data-a="cp">Копировать</button><button data-a="cx">Закрыть</button></div>`)},
-async dl(){let d=null;try{d=await window.claude.use('downloads')}catch(e){}if(!d){toast('Скачивание недоступно — скопируйте JSON');return}try{await d.save({filename:'goals-'+TD()+'.json',data:gi('xj').value})}catch(e){if(!e||e.code!=='declined')toast('Не удалось сохранить файл — скопируйте JSON')}},
+dl(){try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([gi('xj').value],{type:'application/json'}));a.download='goals-'+TD()+'.json';document.body.appendChild(a);a.click();a.remove()}catch(e){toast('Не удалось скачать — скопируйте JSON')}},
 cp(){const t=gi('xj');t.select();let o=0;try{o=document.execCommand('copy')}catch(e){}toast(o?'Скопировано':'Выделено — нажмите Ctrl/Cmd+C')},
 im(){mo(`<b style="font-size:17px">Импорт JSON</b><input type="file" accept=".json,application/json" data-ch="file" style="margin-top:8px"><textarea id="ij" placeholder="или вставьте JSON сюда" style="margin-top:8px;min-height:140px"></textarea><div id="ie" class="m" style="color:var(--er)"></div><div class="sr" style="justify-content:flex-end"><button data-a="cx">Отмена</button><button class="pr" data-a="imp">Импортировать</button></div>`)},
 imp(){let o;try{o=JSON.parse(gi('ij').value)}catch(e){gi('ie').textContent='Некорректный JSON';return}
@@ -258,7 +267,7 @@ try{localStorage.setItem('pgd.t','1');localStorage.removeItem('pgd.t')}catch(e){
 /* облако: вход и синхронизация (Supabase, без библиотек) */
 const SB={u:'https://dezmbvsydyindluxlink.supabase.co',k:'sb_publishable_IMZLToekEdMAGSCwueM4VQ_olIpdQ6_'},LP0='1970-01-01T00:00:00Z',KD={g:'goal',t:'task',r:'report'},
 SYS={ok:['✓','Синхронизировано'],run:['⟳','Синхронизация…'],off:['○','Нет сети — изменения сохранены на устройстве'],err:['⚠','Ошибка синхронизации — повторю позже']};
-let A=null,SN={},LP=LP0,SYK='run',busy=0,again=0,pt;
+let A=null,SN={},BV={},CF=[],LK={n:0,u:0},hid=0,LP=LP0,SYK='run',busy=0,again=0,pt;
 try{A=JSON.parse(localStorage.getItem('pgd.auth'))}catch(e){}
 function sy(k){SYK=k;document.querySelectorAll('.sy').forEach(e=>e.textContent=SYS[k][0]);document.querySelectorAll('.syl').forEach(e=>e.textContent=SYS[k][1])}
 const acct=()=>`<div class="cd"><b>Аккаунт</b><div class="m">${esc(A?A.user.email:'')}<br><span class="syl">${SYS[SYK][1]}</span></div><div class="sr"><button data-a="sn">Синхронизировать</button><button class="dg" data-a="lo">Выйти</button></div></div>`;
@@ -269,31 +278,44 @@ async function refresh(){try{setA(await auth('token?grant_type=refresh_token',{r
 async function api(p,o={}){for(let n=0;n<2;n++){if(!A)throw new Error('auth');if(n||A.expires_at-Date.now()/1000<60)await refresh();const r=await fetch(SB.u+p,{...o,headers:{apikey:SB.k,Authorization:'Bearer '+A.access_token,'Content-Type':'application/json',...o.headers}});if(r.status!==401||n)return r}}
 function items(){const m={};S.goals.forEach(g=>m['g:'+g.id]=g);S.tasks.forEach(t=>m['t:'+t.id]=t);S.reports.forEach(r=>m['r:'+r.wk]=r);return m}
 function put(k,d){const ty=k[0],id=k.slice(2),arr=ty==='g'?S.goals:ty==='t'?S.tasks:S.reports,f=ty==='r'?'wk':'id',i=arr.findIndex(x=>x[f]===id);if(d===null){if(i>=0)arr.splice(i,1);return}const n=ty==='g'?ng(d):ty==='t'?nt(d):d;if(i>=0)arr[i]=n;else arr.push(n);return n}
-const sp=()=>{try{localStorage.setItem(K+'.sn',JSON.stringify(SN));localStorage.setItem(K+'.lp',LP)}catch(e){}},ls=()=>{try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}};
+const sp=()=>{try{localStorage.setItem(K+'.sn',JSON.stringify(SN));localStorage.setItem(K+'.lp',LP);localStorage.setItem(K+'.bv',JSON.stringify(BV))}catch(e){}},ls=()=>{try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}};
 async function pull(){let c=0;for(;;){const r=await api('/rest/v1/records?select=id,data,deleted,updated_at&order=updated_at.asc&limit=1000&updated_at=gt.'+encodeURIComponent(LP));if(!r||!r.ok)throw new Error('pull');const rows=await r.json(),cur=items();
-for(const x of rows){const k=x.id,l=cur[k],lj=l?JSON.stringify(l):null;LP=x.updated_at;if(!KD[k[0]])continue;if(l&&lj!==SN[k])continue;
-if(x.deleted){if(l){put(k,null);c=1}delete SN[k];continue}
-const n=put(k,x.data),nj=JSON.stringify(n);if(nj!==lj)c=1;SN[k]=nj}
+for(const x of rows){const k=x.id,l=cur[k],lj=l?JSON.stringify(l):null;LP=x.updated_at;if(!KD[k[0]])continue;if(l?lj!==SN[k]:(k in SN))continue;
+if(x.deleted){if(l){put(k,null);c=1}delete SN[k];delete BV[k];continue}
+const n=put(k,x.data),nj=JSON.stringify(n);if(nj!==lj)c=1;SN[k]=nj;BV[k]=x.updated_at}
 if(rows.length<1000)break}
 sp();return c}
-async function push(){const cur=items(),ch=[],nj={};for(const k in cur){const j=JSON.stringify(cur[k]);if(SN[k]!==j){ch.push({user_id:A.user.id,id:k,kind:KD[k[0]],data:cur[k],deleted:false});nj[k]=j}}
-for(const k in SN)if(!(k in cur)){ch.push({user_id:A.user.id,id:k,kind:KD[k[0]],data:{},deleted:true});nj[k]=null}
-if(!ch.length)return;
-for(let i=0;i<ch.length;i+=200){const r=await api('/rest/v1/records?on_conflict=user_id,id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(ch.slice(i,i+200))});if(!r||!r.ok)throw new Error('push')}
-for(const k in nj){if(nj[k]===null)delete SN[k];else SN[k]=nj[k]}sp()}
-async function sync(p){if(!A||!S)return;if(busy){again=1;return}busy=1;if(!p)sy('run');try{let c=0;if(p)c=await pull();await push();sy('ok');if(c){ls();if(!D.open&&!/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))render()}}catch(e){sy(navigator.onLine?'err':'off')}busy=0;if(again){again=0;sync(0)}}
-function out(wipe){if(wipe){try{[K,K+'.sn',K+'.lp'].forEach(x=>localStorage.removeItem(x))}catch(e){}}try{localStorage.removeItem('pgd.auth')}catch(e){}A=null;S=null;SN={};showAuth()}
+async function push(){const cur=items(),up=[],nw=[];
+for(const k in cur){const j=JSON.stringify(cur[k]);if(SN[k]!==j)(BV[k]?up:nw).push({k,j,d:cur[k],del:0})}
+for(const k in SN)if(!(k in cur))(BV[k]?up:nw).push({k,j:null,d:{},del:1});
+for(const x of up){const r=await api('/rest/v1/records?id=eq.'+encodeURIComponent(x.k)+'&updated_at=eq.'+encodeURIComponent(BV[x.k]),{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify({data:x.d,deleted:!!x.del})});if(!r||!r.ok)throw new Error('push');const rows=await r.json();
+if(rows.length){if(x.del){delete SN[x.k];delete BV[x.k]}else{SN[x.k]=x.j;BV[x.k]=rows[0].updated_at}}else if(!CF.some(c=>c.k===x.k))CF.push({k:x.k})}
+for(let i=0;i<nw.length;i+=200){const ch=nw.slice(i,i+200),r=await api('/rest/v1/records?on_conflict=user_id,id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=representation'},body:JSON.stringify(ch.map(x=>({user_id:A.user.id,id:x.k,kind:KD[x.k[0]],data:x.d,deleted:!!x.del})))});if(!r||!r.ok)throw new Error('push');const rows=await r.json();
+for(const x of ch){if(x.del){delete SN[x.k];delete BV[x.k]}else{SN[x.k]=x.j;const y=rows.find(z=>z.id===x.k);if(y)BV[x.k]=y.updated_at}}}
+sp()}
+async function cfShow(){if(!CF.length||D.open)return;const c=CF[0],k=c.k,r=await api('/rest/v1/records?select=id,data,deleted,updated_at&id=eq.'+encodeURIComponent(k)),row=r&&r.ok?(await r.json())[0]:null;
+if(!row){CF.shift();delete BV[k];return cfShow()}
+c.row=row;const cur=items()[k],ds=(d,del)=>del?'удалено':esc(d.title||('Отчёт за неделю '+d.wk))+(k[0]==='g'?' — '+Math.round(pct(ng(d)))+'%':'');
+mo(`<b style="font-size:17px">Конфликт правок</b><p class="m">Эта запись изменена на другом устройстве, пока на этом были несохранённые правки. Выберите, какую версию оставить.</p><div class="cd"><div class="m" style="margin:0">Моя версия (это устройство)</div>${cur?ds(cur):'удалено'}</div><div class="cd"><div class="m" style="margin:0">Версия из облака · ${new Date(row.updated_at).toLocaleString('ru-RU')}</div>${ds(row.data,row.deleted)}</div><div class="sr" style="flex-wrap:wrap"><button class="pr" data-a="cfm">Оставить мою</button><button data-a="cfc">Взять из облака</button></div>`)}
+async function sync(p){if(!A||!S)return;if(busy){again=1;return}busy=1;if(!p)sy('run');try{let c=0;if(p)c=await pull();await push();if(CF.length)await cfShow();sy('ok');if(c){ls();if(!D.open&&!/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))render()}}catch(e){sy(navigator.onLine?'err':'off')}busy=0;if(again){again=0;sync(0)}}
+function out(wipe){if(wipe){try{[K,K+'.sn',K+'.lp',K+'.bv',K+'.pin'].forEach(x=>localStorage.removeItem(x))}catch(e){}}try{localStorage.removeItem('pgd.auth')}catch(e){}A=null;S=null;SN={};BV={};CF=[];showAuth()}
 function showAuth(m){if(D.open)D.close();$('nav').hidden=true;document.documentElement.dataset.theme=mq.matches?'dark':'light';
 $('main').innerHTML=`<div class="cd" style="max-width:380px;margin:6vh auto 0"><h1>🎯 Цели на месяц</h1><div class="m">Войдите, чтобы цели и задачи были на всех ваших устройствах.</div><label class="f" for="aem">Почта</label><input id="aem" type="email" autocomplete="email"><label class="f" for="apw">Пароль</label><input id="apw" type="password" autocomplete="current-password" placeholder="не короче 6 символов"><div id="aerr" class="m" style="color:var(--er)">${m||''}</div><div class="sr"><button class="pr" data-a="lg">Войти</button><button data-a="su">Создать аккаунт</button></div></div>`}
 async function aut(p){const e=gi('aem').value.trim(),w=gi('apw').value,er=m=>{gi('aerr').textContent=m};if(!e||!w)return er('Введите почту и пароль');if(p==='signup'&&w.length<6)return er('Пароль: минимум 6 символов');er('Подождите…');
 try{const j=await auth(p,{email:e,password:w});if(!j.access_token){er('Аккаунт создан. Подтвердите почту по ссылке из письма, затем войдите.');return}setA(j);boot()}catch(x){er(trr(x))}}
-function boot(){K='pgd.v1.'+A.user.id;SN={};LP=LP0;S=load();
-if(S){try{SN=JSON.parse(localStorage.getItem(K+'.sn')||'{}');LP=localStorage.getItem(K+'.lp')||LP0}catch(e){SN={}}S.goals=S.goals.map(ng);S.tasks=(Array.isArray(S.tasks)?S.tasks:[]).map(nt);if(!['auto','light','dark'].includes(S.theme))S.theme='auto'}
+function boot(){K='pgd.v1.'+A.user.id;SN={};BV={};CF=[];LP=LP0;S=load();
+if(S){try{SN=JSON.parse(localStorage.getItem(K+'.sn')||'{}');LP=localStorage.getItem(K+'.lp')||LP0;const b=localStorage.getItem(K+'.bv');if(b)BV=JSON.parse(b);else LP=LP0}catch(e){SN={};BV={};LP=LP0}S.goals=S.goals.map(ng);S.tasks=(Array.isArray(S.tasks)?S.tasks:[]).map(nt);if(!['auto','light','dark'].includes(S.theme))S.theme='auto'}
 else S={v:1,theme:'auto',goals:[],tasks:[],reports:[]};
-$('nav').hidden=false;U.s='ov';U.g=null;render();if(mem)toast('Хранилище недоступно — работаем в памяти');sync(1)}
+$('nav').hidden=false;U.s='ov';U.g=null;render();if(mem)toast('Хранилище недоступно — работаем в памяти');lock();sync(1)}
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='apw')act.lg()});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)sync(1)});
 addEventListener('online',()=>sync(1));addEventListener('offline',()=>sy('off'));setInterval(()=>{if(!document.hidden)sync(1)},25000);
+const hx=async s=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s)))].map(b=>b.toString(16).padStart(2,'0')).join('');
+const pg=()=>{try{return JSON.parse(localStorage.getItem(K+'.pin'))}catch(e){return null}};
+const pinc=()=>`<div class="cd"><b>PIN-код</b><div class="m">Блокирует приложение на этом устройстве, если вы вышли из него больше чем на минуту. Это защита от случайного взгляда; главная защита — пароль аккаунта.</div><div class="sr"><button data-a="pinset">${pg()?'Сменить PIN':'Включить PIN'}</button>${pg()?'<button class="dg" data-a="pinoff">Выключить</button>':''}</div></div>`;
+function lock(){if(!A||!pg())return;if(D.open)D.close();const e=gi('lk');e.hidden=false;e.innerHTML='<div class="cd" style="width:min(340px,100%);text-align:center"><div style="font-size:34px">🔒</div><b>Введите PIN-код</b><input id="pin" type="password" inputmode="numeric" autocomplete="off" maxlength="8" aria-label="PIN-код" style="text-align:center;font-size:22px;letter-spacing:6px;margin:12px 0"><div id="perr" class="m" style="color:var(--er)"></div><button class="pr" data-a="ul" style="width:100%">Открыть</button><div style="margin-top:12px"><button data-a="lo2" style="border:0;background:none;color:var(--mu);text-decoration:underline">Забыли PIN? Выйти из аккаунта</button></div></div>';gi('pin').focus()}
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='pin')act.ul()});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)hid=Date.now();else if(hid&&Date.now()-hid>60000)lock()});
 if(A)boot();else showAuth();
 if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 </script></body></html>
